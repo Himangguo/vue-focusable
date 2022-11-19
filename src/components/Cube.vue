@@ -4,7 +4,7 @@
 
 <script>
 export default {
-  nmae: "Cube",
+  name: "Cube",
   props: {
     type: {
       type: String,
@@ -19,8 +19,7 @@ export default {
       default: "",
     },
   },
-  updated() {
-    console.log('update',this.focusStateClass);
+  methods: {
   }
 };
 </script>

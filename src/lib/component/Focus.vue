@@ -1,10 +1,9 @@
 <script>
 import classnames from "classnames";
-import { getWidgetRect, careteId, changeGoto, cloneElement } from "../core";
+import { focusManageLib, getWidgetRect, createId, changeGoto } from "../core";
 import { isVueCpn } from "../utils/type";
 export default {
   name: "Focus",
-  inject: ["focusInfo"],
   props: {
     onOk: {
       type: Function,
@@ -12,7 +11,7 @@ export default {
         return () => {};
       },
     },
-    onAcitve: {
+    onActive: {
       type: Function,
       default() {
         return () => {};
@@ -41,7 +40,7 @@ export default {
       default: undefined,
     },
     zIndex: {
-      type: Number,
+      type: Number|String,
       default: 1,
     },
     foGoto: {
@@ -61,13 +60,19 @@ export default {
     };
   },
   mounted() {
+    console.log('Focus mounted')
     // 指定移动方向
     let goto = changeGoto(this.foGoto);
     let element = this.$el;
+    // 监听dom是否可见，并添加可见属性（在盒子中的浏览器不支持IntersectionObserver）
+    // this.observe(element)
     // 创建唯一id
-    this.id = careteId();
+    this.id = createId();
     // 组件层级
     let rect = getWidgetRect(element);
+    // 为element添加原生属性
+    element.dataset.focusId = this.id;
+    element.dataset.focusIndex = this.zIndex;
     let cubInfo = {
       rect,
       element,
@@ -87,32 +92,34 @@ export default {
       },
       onOk: this.onOk,
       onEdge: this.onEdge,
-      onAcitve: this.onAcitve,
+      onActive: this.onActive,
       onBeforeLeave: this.onBeforeLeave,
       onLeave: this.onLeave,
       foWidgetBind: this.foWidgetBind,
     };
 
-    this.focusInfo.cubs[this.zIndex] = this.focusInfo.cubs[this.zIndex] || {};
+    focusManageLib.cubs[this.zIndex] = focusManageLib.cubs[this.zIndex] || {};
     // 在全局focusManange中保存这个焦点组件的信息
-    this.focusInfo.cubs[this.zIndex][this.id] = cubInfo;
+    focusManageLib.cubs[this.zIndex][this.id] = cubInfo;
 
-    if (this.foIndex) this.focusInfo.foIndexs[this.foIndex] = cubInfo;
+    if (this.foIndex) focusManageLib.foIndexs[this.foIndex] = cubInfo;
 
-    // 为element添加原生属性
-    element.dataset.focusId = this.id;
-    element.dataset.focusIndex = this.zIndex;
+
+  },
+  beforeUpdate() {
+    // 支持goto的动态更新
+    focusManageLib.cubs[this.zIndex][this.id].goto = changeGoto(this.foGoto);
   },
   beforeDestroy() {
     // 在组件将要卸载时，删除focusManage中保存的此focus节点对象
-    delete this.focusInfo.cubs[this.zIndex][this.id];
+    delete focusManageLib.cubs[this.zIndex][this.id];
     if (this.foIndex) {
-      delete this.focusInfo.foIndexs[this.foIndex];
+      delete focusManageLib.foIndexs[this.foIndex];
     }
   },
   render(createElement) {
     let child = this.$slots.default[0];
-    let childClass = child.data.staticClass;
+    let childClass = child.data?.staticClass;
     let staticClass = "";
     if (!isVueCpn(child)) {
       staticClass = classnames({
@@ -122,6 +129,14 @@ export default {
         [this.activeClassName]: this.activeClassName === this.reciveClassName,
         [this.cacheClassName]: this.cacheClassName === this.reciveClassName,
       });
+      if(!child.tag && child.text) {
+        // 如果是纯文本
+        return createElement(
+            'span',
+            { staticClass },
+            child.text
+        );
+      }
       return createElement(
         child.tag,
         { ...child.data, staticClass },
@@ -132,17 +147,57 @@ export default {
         [this.activeClassName]: this.activeClassName === this.reciveClassName,
         [this.cacheClassName]: this.cacheClassName === this.reciveClassName,
       });
-      child.componentInstance && Object.assign(child.componentInstance._props, {
-        focusStateClass:
-          this.activeClassName === this.reciveClassName
-            ? this.activeClassName
-            : this.cacheClassName === this.reciveClassName
-            ? this.cacheClassName
-            : "",
-      });
-      // child.componentInstance&&child.componentInstance.$forceUpdate()
-      return child;
+      // 1、直接修改组件的props，但是vue会警告此做法
+      // child.componentInstance && Object.assign(child.componentInstance._props, {
+      //   focusStateClass:
+      //     this.activeClassName === this.reciveClassName
+      //       ? this.activeClassName
+      //       : this.cacheClassName === this.reciveClassName
+      //       ? this.cacheClassName
+      //       : "",
+      // });
+      // return child;
+      // 2、直接创建组件的虚拟dom，但是需要手动引入组件并注册
+      return createElement(
+          child.componentOptions.tag,
+          {
+            on: {...child.componentOptions.listeners},
+            props: {...child.componentOptions.propsData,
+              focusStateClass:
+                this.activeClassName === this.reciveClassName
+                  ? this.activeClassName
+                  : this.cacheClassName === this.reciveClassName
+                  ? this.cacheClassName
+                  : "",
+               },
+            attrs: child.data.attrs,
+            staticClass: child.data.staticClass,
+            staticStyle: {
+              boxSizing: 'border-box',
+            }
+          },
+          child.children
+      );
     }
   },
+  methods: {
+    observe(ele) {
+      let root = document.body
+      const options = {
+        root,
+        rootMargin: '0px',
+        threshold: 0.1
+      }
+      const observer = new IntersectionObserver((entries) => {
+        if(entries[0].isIntersecting) {
+          ele.setAttribute('data-focusable', '')
+        }else {
+          ele.removeAttribute('data-focusable')
+        }
+      }, options)
+
+      observer.observe(ele);
+    }
+  }
 };
 </script>

@@ -1,48 +1,71 @@
 <template>
-  <FocusManageVue>
-    <div id="app" :class="dd" class="12">
-    <nav>
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </nav>
+    <div id="app">
+      <div class="nav-wrapper">
+        <Focus v-for="item in navList" :key="item.name" :onOk="(info)=>handleOk(item.path)" >
+          <span class="nav">{{item.name}}</span>
+        </Focus>
+      </div>
     <router-view/>
   </div>
-  </FocusManageVue>
 </template>
 <script>
-import FocusManageVue from './lib/component/FocusManage.vue';
+import Focus from "@/lib/component/Focus";
 export default {
   name: 'APP',
   components: {
-    FocusManageVue
+    Focus
   },
   data() {
     return {
-      dd: 3234
+      navList: [
+        {
+          name: 'basic',
+          path: '/'
+        },
+        {
+          name: 'zIndex',
+          path: '/zIndex'
+        },
+        {
+          name: 'remember',
+          path: '/remember'
+        },
+        {
+          name: 'scroll',
+          path: '/scroll'
+        }
+      ]
+    }
+  },
+  methods: {
+    handleOk(path) {
+      if(path !== this.$route.path) {
+        this.$router.push({
+          path: path
+        })
+      }
+
     }
   }
+
 }
 
 </script>
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
+<style scoped>
+.nav-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
 }
 
-nav {
-  padding: 30px;
+.nav {
+  padding: 10px;
+  border: 1px solid black;
+  color: black;
+}
+.nav.focusActive {
+  background-color: green;
+  color: white;
 }
 
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-nav a.router-link-exact-active {
-  color: #42b983;
-}
 </style>

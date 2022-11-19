@@ -80,7 +80,7 @@ export default {
 
 .subnav {
   margin-bottom: 0;
-  background: blue;
+  background: red;
 }
 
 .nav-wrap {
@@ -105,7 +105,7 @@ export default {
 .cube.focusActive {
   background: green;
 }
-.cube.cached {
-  background: yellow;
-}
+/*.cube.cached {*/
+/*  background: yellow;*/
+/*}*/
 </style>

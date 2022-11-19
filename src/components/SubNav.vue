@@ -1,21 +1,22 @@
 <template>
-  <div className="sub-nav-wrap" v-if="show">
+  <div class="sub-nav-wrap" v-if="show">
     <Focus
       v-for="item in subData"
       :key="item.name"
-      :zIndex="2"
+      zIndex="2"
       :onLeave="onLeave"
       :onBeforeLeave="onBeforeLeave"
     >
-      <Cube :type="item.type" :name="item.name" />
+      <Cube :type="item.type" :name="item.name"/>
     </Focus>
   </div>
 </template>
 
 <script>
-import { zIndexChange } from "../lib/core";
+import { zIndexChange, registerComponent } from "../lib/core";
 import Focus from "@/lib/component/Focus.vue";
 import Cube from "./Cube.vue";
+registerComponent(Cube)
 export default {
   name: "SubNav",
   components: {
@@ -46,8 +47,7 @@ export default {
       }
     },
     onBeforeLeave(e) {
-      if (
-        (e.eventType === "left" || e.eventType === "right") &&
+      if (e.eventType === "left" &&
         this.show === true
       ) {
         zIndexChange("down");
@@ -56,3 +56,23 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.sub-nav-wrap {
+  position: absolute;
+  left: 100px;
+  top: 60px;
+}
+.cube {
+  width: 100px;
+  height: 30px;
+  background: red;
+  font-size: 23px;
+  text-align: center;
+  line-height: 30px;
+  margin-bottom: 10px;
+}
+.cube.focusActive {
+  background: green;
+}
+</style>

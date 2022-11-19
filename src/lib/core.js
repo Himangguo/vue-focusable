@@ -1,3 +1,4 @@
+import Vue from 'vue'
 const keyMap = {
   37: "left",
   38: "up",
@@ -23,6 +24,7 @@ const findWidgets = (element, cb) => {
   }
   findWidgets(parent, cb);
 };
+
 
 const focusManageLib = {
   cur: {
@@ -114,7 +116,7 @@ const refreshLocInfo = (els) => {
 };
 
 // 创建Focus组件的id
-const careteId = () =>
+const createId = () =>
   Math.random() * 100000000000000000 + new Date().getTime();
 
 // 方向转换
@@ -157,7 +159,7 @@ const queryWidgetByShadowAlgorithm = (curWidget, widgetsRect, dir) => {
       if (tempWidget === curWidget.element) {
         continue;
       }
-      // disabled 属性
+      // disabled 属性、focusable属性
       if (tempWidget.disabled) {
         continue;
       }
@@ -205,7 +207,6 @@ const queryWidgetByShadowAlgorithm = (curWidget, widgetsRect, dir) => {
       }
     }
   }
-  console.log(resultWidget);
   return resultWidget;
 };
 
@@ -218,6 +219,10 @@ const queryWidgetByAreaAlgorithm = (curWidget, widgetsRect, dir) => {
     let tempInfo = widgetsRect[i];
     let tempWidget = tempInfo.element;
     if (tempWidget === curWidget.element) {
+      continue;
+    }
+    // focusable属性
+    if(tempWidget.hasAttribute('not-allow-focus')) {
       continue;
     }
     if (tempWidget.disabled) {
@@ -323,13 +328,38 @@ const doSwitch = (curWidget, widgetsRect, dirName) => {
   return newFocusChildWidget;
 };
 
+const registerComponent = (componentObj)=>{
+  Vue.component(componentObj.name, componentObj)
+}
 
-const cloneElement = (VNode, props = {}) => {
-  const attrs = { ...VNode.data.attrs, ...props };
-  const data = { ...VNode.data, attrs };
+const isContain = (ele)=>{
+  let root = document
+  findWidgets(ele, (id)=>{
+    root = focusManageLib.widgets[id].$el
+  })
+  if(root !== document) {
+    root = root.children[0]
+  }
+  const screenHeight = root.clientHeight
+  // 获取wrapper移动的高度、宽度
+  const [absTranslateX, absTranslateY] = (root.style.transform?.replace(/translate\(-?(\d+)px, -?(\d+)px\)/, '$1,$2') || '0,0').split(',')
+  const offsetTop = ele.offsetTop
+  let marginTop = parseInt(getComputedStyle(ele, null).marginTop, 10);
+  let marginBottom = parseInt(getComputedStyle(ele, null).marginBottom, 10);
+  let height =  parseInt(getComputedStyle(ele, null).height, 10);
+  // console.log(height, marginTop, marginBottom)
+  // console.log(offsetTop, absTranslateY,screenHeight, root.style.transform, ele)
+  if(offsetTop>=screenHeight) {
+    if(offsetTop - absTranslateY<0) {
+      return Math.abs(offsetTop - absTranslateY) < height + marginTop
+    }else {
+      return offsetTop - absTranslateY < screenHeight
+    }
+  }else {
+    return (offsetTop+height+marginTop) > absTranslateY
+  }
+}
 
-  return { ...VNode, data };
-};
 document.addEventListener("keydown", (e) => {
   let code = e.keyCode;
   let eventType = keyMap[code];
@@ -350,14 +380,13 @@ document.addEventListener("keydown", (e) => {
       // 这两个调用是为了使得className 变化
       focusManageLib.prevLast.clear();
       focusManageLib.last.unactive();
-      console.log('will active',focusManageLib.cur);
       focusManageLib.cur.active();
       if (focusManageLib.last.onLeave) {
         focusManageLib.last.onLeave(focusManageLib.last);
       }
       // 修改prevLast对象
       focusManageLib.prevLast = focusManageLib.last;
-      focusManageLib.cur.onAcitve(focusManageLib.cur);
+      focusManageLib.cur.onActive(focusManageLib.cur);
     } else if (focusManageLib.cur.element && !newInfo) {
       // 不可以移动的情况（到达边界）
       focusManageLib.cur.onEdge(focusManageLib.cur);
@@ -381,9 +410,11 @@ window.focusManageLib = focusManageLib;
 export {
   focusManageLib,
   getWidgetRect,
-  careteId,
+  createId,
   changeGoto,
   zIndexChange,
   refreshLocInfo,
-  cloneElement
+  registerComponent,
+  findWidgets,
+  isContain
 };
